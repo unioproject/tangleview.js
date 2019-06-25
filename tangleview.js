@@ -2,7 +2,7 @@
 /* global window, io, fetch, console, loki */
 
 // Initialize DB
-let dbGlobal = new loki("txHistory");
+let dbGlobal = new loki('txHistory');
 // Store Tangle history
 let txHistoryGlobal = {};
 // Default amount of TX to poll initially
@@ -52,9 +52,9 @@ const addCollectionsToTxHistory = options => {
   return new Promise((resolve, reject) => {
     let error = false;
     try {
-      txHistoryGlobal[options.host] = dbGlobal.addCollection("txHistory", {
-        unique: ["hash"],
-        indices: ["address", "bundle", "receivedAt"]
+      txHistoryGlobal[options.host] = dbGlobal.addCollection('txHistory', {
+        unique: ['hash'],
+        indices: ['address', 'bundle', 'receivedAt']
       });
     } catch (e) {
       error = e;
@@ -72,7 +72,7 @@ const addCollectionsToTxHistory = options => {
 // Determine and construct the URL of the data source
 const getUrl = options => {
   if (options && options.host) {
-    options.hostProtocol = `${options && options.ssl ? "https:" : "http:"}`;
+    options.hostProtocol = `${options && options.ssl ? 'https:' : 'http:'}`;
     options.hostUrl = `${options.hostProtocol}//${options.host}`;
   } else {
     options.hostProtocol = window.location.protocol;
@@ -95,13 +95,12 @@ const lokiFind = (params, callback) => {
     result = txHistoryGlobal[params.host]
       .chain()
       .find(params && params.query ? params.query : {})
-      .simplesort(params && params.sort ? params.sort : "")
+      .simplesort(params && params.sort ? params.sort : '')
       .data({ removeMeta: true });
 
-    if (params.limit && params.limit > 0)
-      result = takeRight(result, params.limit);
+    if (params.limit && params.limit > 0) result = takeRight(result, params.limit);
   } catch (e) {
-    err = "Error on lokiJS find() call: " + e;
+    err = 'Error on lokiJS find() call: ' + e;
   } finally {
     if (callback) callback(err, result);
   }
@@ -113,7 +112,7 @@ const InitialHistoryPoll = (that, options) => {
     options.hostUrl
   }:4433/api/v1/getRecentTransactions?amount=${txAmountToPollGlobal}`;
 
-  fetch(apiUrl, { cache: "no-cache" })
+  fetch(apiUrl, { cache: 'no-cache' })
     .then(fetchedList => fetchedList.json())
     .then(fetchedListJSON => {
       // Store fetched TX history in local DB
@@ -123,11 +122,8 @@ const InitialHistoryPoll = (that, options) => {
       historyFetchedFromBackendGlobal = true;
     })
     .catch(e => {
-      console.error("Error fetching txHistory", e);
-      if (
-        InitialHistoryPollRetriesGlobal > 0 &&
-        !historyFetchedFromBackendGlobal
-      ) {
+      console.error('Error fetching txHistory', e);
+      if (InitialHistoryPollRetriesGlobal > 0 && !historyFetchedFromBackendGlobal) {
         window.setTimeout(() => InitialHistoryPoll(that, options), 2500);
         InitialHistoryPollRetriesGlobal--;
       }
@@ -148,17 +144,17 @@ const UpdateTXStatus = (update, updateType, options) => {
   const confirmationTime = update.ctime;
 
   // Find TX by unique index "hash" (Utilizing LokiJS binary index performance)
-  const txToUpdate = txHistoryGlobal[options.host].by("hash", txHash);
+  const txToUpdate = txHistoryGlobal[options.host].by('hash', txHash);
 
   if (txToUpdate) {
-    if (updateType === "Confirmed" || updateType === "Milestone") {
+    if (updateType === 'Confirmed' || updateType === 'Milestone') {
       txToUpdate.ctime = confirmationTime;
       txToUpdate.confirmed = true;
     }
-    if (updateType === "Milestone") {
+    if (updateType === 'Milestone') {
       txToUpdate.milestone = milestoneType;
     }
-    if (updateType === "Reattach") {
+    if (updateType === 'Reattach') {
       txToUpdate.reattached = true;
     }
 
@@ -166,7 +162,7 @@ const UpdateTXStatus = (update, updateType, options) => {
   } else {
     console.log(
       `LokiJS: ${
-        updateType === "Milestone" ? "Milestone" : "TX"
+        updateType === 'Milestone' ? 'Milestone' : 'TX'
       } not found in local DB - Hash: ${txHash} | updateType: ${updateType}`
     );
   }
@@ -179,14 +175,14 @@ const InitWebSocket = (that, options) => {
 
     const webSocketUrl = `${options.hostUrl}:4434`;
     const socket = io.connect(webSocketUrl, {
-      secure: options.hostProtocol === "https:" ? true : false,
+      secure: options.hostProtocol === 'https:' ? true : false,
       reconnection: false
     });
 
-    socket.on("connect", () => {
+    socket.on('connect', () => {
       console.log(`Successfully connected to Websocket.. [${options.host}]`);
 
-      socket.on("newTX", newTX => {
+      socket.on('newTX', newTX => {
         /*
         Set timestamp on Global locally
         newTX.receivedAtms = parseInt(Date.now());
@@ -196,42 +192,42 @@ const InitWebSocket = (that, options) => {
         .insert(newTX) mutates object newTX.
         As such newTX needs to be "dirty copied" before handling the insert.
         */
-        emitToAllInstances("txNew", JSON.parse(JSON.stringify(newTX)));
+        emitToAllInstances('txNew', JSON.parse(JSON.stringify(newTX)));
         try {
           txHistoryGlobal[options.host].insert(newTX);
         } catch (e) {
           console.log(e);
         }
       });
-      socket.on("update", update => {
-        UpdateTXStatus(update, "Confirmed", options);
-        emitToAllInstances("txConfirmed", update);
+      socket.on('update', update => {
+        UpdateTXStatus(update, 'Confirmed', options);
+        emitToAllInstances('txConfirmed', update);
       });
-      socket.on("updateMilestone", updateMilestone => {
-        UpdateTXStatus(updateMilestone, "Milestone", options);
-        emitToAllInstances("milestones", updateMilestone);
+      socket.on('updateMilestone', updateMilestone => {
+        UpdateTXStatus(updateMilestone, 'Milestone', options);
+        emitToAllInstances('milestones', updateMilestone);
       });
-      socket.on("updateReattach", updateReattach => {
-        UpdateTXStatus(updateReattach, "Reattach", options);
-        emitToAllInstances("txReattaches", updateReattach);
+      socket.on('updateReattach', updateReattach => {
+        UpdateTXStatus(updateReattach, 'Reattach', options);
+        emitToAllInstances('txReattaches', updateReattach);
       });
 
-      socket.on("disconnect", reason => {
+      socket.on('disconnect', reason => {
         console.log(`WebSocket disconnect [${reason}]`);
         websocketActiveGlobal[options.host] = false;
         socket.close();
 
         window.setTimeout(() => {
           InitWebSocket(that, options);
-          console.log("WebSocket reconnecting...");
+          console.log('WebSocket reconnecting...');
         }, getRndInteger(100, 1000));
       });
 
-      socket.on("reconnect", attemptNumber => {
+      socket.on('reconnect', attemptNumber => {
         console.log(`WebSocket reconnect [${attemptNumber}]`);
       });
 
-      socket.on("reconnect_error", error => {
+      socket.on('reconnect_error', error => {
         console.log(`WebSocket reconnect_error [${error}]`);
         websocketActiveGlobal[options.host] = false;
         window.setTimeout(() => {
@@ -239,7 +235,7 @@ const InitWebSocket = (that, options) => {
         }, getRndInteger(10, 100));
       });
 
-      socket.on("connect_timeout", timeout => {
+      socket.on('connect_timeout', timeout => {
         console.log(`WebSocket connect_timeout [${timeout}]`);
         websocketActiveGlobal[options.host] = false;
         window.setTimeout(() => {
@@ -247,11 +243,11 @@ const InitWebSocket = (that, options) => {
         }, getRndInteger(10, 100));
       });
 
-      socket.on("error", error => {
+      socket.on('error', error => {
         console.log(`WebSocket error [${error}]`);
       });
 
-      socket.on("connect_error", error => {
+      socket.on('connect_error', error => {
         console.log(`WebSocket connect_error [${error}]`);
         websocketActiveGlobal[options.host] = false;
         window.setTimeout(() => {
@@ -260,7 +256,7 @@ const InitWebSocket = (that, options) => {
       });
 
       // Ensure socket gets closed before exiting the session
-      window.addEventListener("beforeunload", () => {
+      window.addEventListener('beforeunload', () => {
         socket.close();
       });
     });
@@ -284,14 +280,14 @@ class tangleview {
           InitialHistoryPoll(this, options);
         })
         .catch(err => {
-          console.log("addCollectionsToTxHistory error: ", err);
+          console.log('addCollectionsToTxHistory error: ', err);
         });
     }
 
     if (!websocketActiveGlobal[options.host]) {
       InitWebSocket(this, options);
     } else if (websocketActiveGlobal[options.host]) {
-      console.log("WebSocket already initialized");
+      console.log('WebSocket already initialized');
     }
   }
 
@@ -311,9 +307,7 @@ class tangleview {
 
     this.events[eventName].push(fn);
     return () => {
-      this.events[eventName] = this.events[eventName].filter(
-        eventFn => fn !== eventFn
-      );
+      this.events[eventName] = this.events[eventName].filter(eventFn => fn !== eventFn);
     };
   }
 
@@ -323,7 +317,7 @@ class tangleview {
         {
           query: query,
           limit: queryOption && queryOption.limit ? queryOption.limit : -1,
-          sort: queryOption && queryOption.sort ? queryOption.sort : "",
+          sort: queryOption && queryOption.sort ? queryOption.sort : '',
           host: this.host
         },
         (err, res) => {
@@ -373,20 +367,12 @@ class tangleview {
             if (err) {
               reject(err);
             } else {
-              if (
-                res.length <= 5 &&
-                retries > 0 &&
-                !historyFetchedFromBackendGlobal
-              ) {
+              if (res.length <= 5 && retries > 0 && !historyFetchedFromBackendGlobal) {
                 retries--;
                 window.setTimeout(() => {
                   lokiFindWrapper();
                 }, 100);
-              } else if (
-                res.length <= 5 &&
-                retries === 0 &&
-                !historyFetchedFromBackendGlobal
-              ) {
+              } else if (res.length <= 5 && retries === 0 && !historyFetchedFromBackendGlobal) {
                 reject(res);
               } else {
                 resolve(res);
