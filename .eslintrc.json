@@ -1,0 +1,14 @@
+{
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": 9,
+    "sourceType": "script",
+    "ecmaFeatures": {
+      "impliedStrict": true
+    }
+  },
+  "env": { "es6": true },
+  "rules": {
+    "quotes": ["error", "single", { "avoidEscape": true }]
+  }
+}
