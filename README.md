@@ -19,7 +19,7 @@ Add following scripts to the bottom of your `<body>` tag or to the equivalent pl
 To implement tangleview into your project, add following line:
 
 ```js
-const tangle = new tangleview({ host: "localhost", ssl: false });
+const tangle = new tangleview({ host: 'localhost', ssl: false });
 ```
 
 **Options**\
@@ -41,10 +41,10 @@ Returns `Promise` / `Array` of TX objects
 tangle
   .getTxHistory({ amount: 15000 })
   .then(history => {
-    console.log("Tangle history:", history);
+    console.log('Tangle history:', history);
   })
   .catch(err => {
-    console.log("Error fetching Tangle history:", err);
+    console.log('Error fetching Tangle history:', err);
   });
 ```
 
@@ -53,8 +53,8 @@ tangle
 Returns `object` of newly propagated TX.
 
 ```js
-tangle.on("txNew", newTxObject => {
-  console.log("New TX on Tangle:", newTxObject);
+tangle.on('txNew', newTxObject => {
+  console.log('New TX on Tangle:', newTxObject);
 });
 ```
 
@@ -63,8 +63,8 @@ tangle.on("txNew", newTxObject => {
 Returns `object` of newly discovered confirmation.
 
 ```js
-tangle.on("txConfirmed", newTxConfirmationObject => {
-  console.log("New confirmation on Tangle:", newTxConfirmationObject);
+tangle.on('txConfirmed', newTxConfirmationObject => {
+  console.log('New confirmation on Tangle:', newTxConfirmationObject);
 });
 ```
 
@@ -73,8 +73,28 @@ tangle.on("txConfirmed", newTxConfirmationObject => {
 Returns `object` of newly discovered reattachment.
 
 ```js
-tangle.on("txReattaches", newTxReattachmentObject => {
-  console.log("New reattachment on Tangle:", newTxReattachmentObject);
+tangle.on('txReattaches', newTxReattachmentObject => {
+  console.log('New reattachment on Tangle:', newTxReattachmentObject);
+});
+```
+
+#### on('tangleStateChanged');
+
+Returns `list` of TX of current Tangle state. Gets triggered if an app modifies the Tangle state within the library.
+
+```js
+tangle.on('tangleStateChanged', newTangleState => {
+  console.log('State of Tangle has changed, updated version:', newTangleState);
+});
+```
+
+#### on('tangleStateRemoved');
+
+Returns `list` of TX which have been deleted. Gets triggered if an app deleted TX from the Tangle state within the library.
+
+```js
+tangle.on('tangleStateRemoved', removedTx => {
+  console.log('List of removed TX:', removedTx);
 });
 ```
 
@@ -83,7 +103,7 @@ tangle.on("txReattaches", newTxReattachmentObject => {
 Returns `object` of newly discovered milestone.
 
 ```js
-tangle.on("milestones", newMilestoneObject => {
-  console.log("New milestone on Tangle:", newMilestoneObject);
+tangle.on('milestones', newMilestoneObject => {
+  console.log('New milestone on Tangle:', newMilestoneObject);
 });
 ```

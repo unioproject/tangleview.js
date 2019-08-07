@@ -130,12 +130,27 @@ const InitialHistoryPoll = (that, options) => {
     });
 };
 
-// Helper function to emit updates to all instances of tangleview
+// Helper functions
+
+// Emit updates to all instances of tangleview
 const emitToAllInstances = (txType, tx) => {
   tangleview.allInstances.map(instance => {
     instance.emit(txType, tx);
   });
 };
+
+// Remove meta data from DB query results
+const lokiRemoveMeta = input => {
+  const output = input.map(item => {
+    const itemNew = JSON.parse(JSON.stringify(item));
+    delete itemNew.$loki;
+    delete itemNew.meta;
+    return itemNew;
+  });
+  return output;
+};
+
+// Helper functions end
 
 // Update conf and milestone status on local DB
 const UpdateTXStatus = (update, updateType, options) => {
@@ -173,7 +188,7 @@ const InitWebSocket = (that, options) => {
   if (!websocketActiveGlobal[options.host]) {
     websocketActiveGlobal[options.host] = true;
 
-    const webSocketUrl = `${options.hostUrl}:4434`;
+    const webSocketUrl = `${options.hostUrl}:4434`; // Make port variable?
     const socket = io.connect(webSocketUrl, {
       secure: options.hostProtocol === 'https:' ? true : false,
       reconnection: false
@@ -334,9 +349,19 @@ class tangleview {
   remove(query, queryOption) {
     return new Promise((resolve, reject) => {
       let error = false;
-      let result;
+      let toRemove;
+      let removed;
       try {
-        result = txHistoryGlobal[this.host]
+        /*
+        Need to do two seperate DB queries for now because there is no obvious and simple way to do it with a single one.
+         */
+        toRemove = txHistoryGlobal[this.host]
+          .chain()
+          .find(query)
+          .limit(queryOption && queryOption.limit ? queryOption.limit : -1)
+          .data({ removeMeta: true });
+
+        removed = txHistoryGlobal[this.host]
           .chain()
           .find(query)
           .limit(queryOption && queryOption.limit ? queryOption.limit : -1)
@@ -345,7 +370,13 @@ class tangleview {
         error = e;
       } finally {
         if (!error) {
-          resolve(result);
+          if (removed && removed.collection) {
+            removed = removed.collection.data;
+            removed = lokiRemoveMeta(removed);
+          }
+          emitToAllInstances('tangleStateChanged', removed);
+          emitToAllInstances('tangleStateRemoved', toRemove);
+          resolve(toRemove);
         } else {
           reject(error);
         }
