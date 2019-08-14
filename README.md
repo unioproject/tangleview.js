@@ -48,6 +48,24 @@ tangle
   });
 ```
 
+#### remove(query, queryOptions)
+
+Removes TX from the Tangle state.
+`query` can be like any MongoDB query scheme. (eg. `{ value: { $ne: 0 } }` equals all value TX or `{}` equals all TX).
+`queryOptions` only supports `limit` for now. It restricts the amount of TX to delete, starting from the most recent one.
+For example, `remove({}, {limit: 50})` deletes any of the last 50 TX.
+
+`remove()` triggers `on('tangleStateChanged')` and `on('tangleStateRemoved')`
+
+```js
+tangle.remove(
+  { value: { $ne: 0 } },
+  {
+    limit: 50
+  }
+);
+```
+
 #### on('txNew');
 
 Returns `object` of newly propagated TX.
